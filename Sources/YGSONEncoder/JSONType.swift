@@ -7,6 +7,8 @@
 
 import Foundation
 
+
+typealias KeyValue = (String, JSONType)
 indirect enum JSONType {
     case bool(Bool)
     case integer(Int)
@@ -16,7 +18,7 @@ indirect enum JSONType {
     case date(Date)
     case data(Data)
     case array([JSONType])
-    case object([String: JSONType])
+    case object([KeyValue])
 }
 
 

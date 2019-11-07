@@ -8,11 +8,26 @@
 import Foundation
 
 extension _YGSONEncoder {
+
+    fileprivate class Storage<Key: CodingKey> {
+
+        typealias KeyValue = (Key, YGSONEncodingContainer)
+        private(set) var elements: [KeyValue] = []
+        private var hash: [String: KeyValue] = [:]
+
+        func append(key: Key, value: YGSONEncodingContainer) {
+            let keyValue: KeyValue = (key, value)
+            self.elements.append(keyValue)
+            self.hash[key.stringValue] = keyValue
+        }
+    }
+
     class KeyedContainer<Key: CodingKey>: KeyedEncodingContainerProtocol {
+
         private(set) var codingPath: [CodingKey]
         var userInfo: [CodingUserInfoKey: Any]
 
-        private var storage: [String: YGSONEncodingContainer] = [:]
+        private var storage = Storage<Key>()
 
         func nestedCodingPath(forKey key: CodingKey) -> [CodingKey] {
             return self.codingPath + [key]
@@ -36,21 +51,21 @@ extension _YGSONEncoder {
 
         private func nestedSingleValueContainer(forKey key: Key) -> SingleValueEncodingContainer {
             let container = _YGSONEncoder.SingleValueContainer(codingPath: self.nestedCodingPath(forKey: key), userInfo: self.userInfo)
-            self.storage[key.stringValue] = container
+            self.storage.append(key: key, value: container)
             return container
         }
 
 
          func nestedUnkeyedContainer(forKey key: Key) -> UnkeyedEncodingContainer {
             let container = _YGSONEncoder.UnkeyedContainer(codingPath: self.nestedCodingPath(forKey: key), userInfo: self.userInfo)
-            self.storage[key.stringValue] = container
+            self.storage.append(key: key, value: container)
 
             return container
         }
 
         func nestedContainer<NestedKey>(keyedBy keyType: NestedKey.Type, forKey key: Key) -> KeyedEncodingContainer<NestedKey> where NestedKey : CodingKey {
             let container = _YGSONEncoder.KeyedContainer<NestedKey>(codingPath: self.nestedCodingPath(forKey: key), userInfo: self.userInfo)
-            self.storage[key.stringValue] = container
+            self.storage.append(key: key, value: container)
 
             return KeyedEncodingContainer(container)
         }
@@ -69,7 +84,7 @@ extension _YGSONEncoder {
 extension _YGSONEncoder.KeyedContainer: YGSONEncodingContainer {
 
     var jsonValue: JSONType {
-        let elements = self.storage.mapValues { $0.jsonValue }
+        let elements = self.storage.elements.map { ($0.0.stringValue, $0.1.jsonValue) }
         return .object(elements)
     }
 }

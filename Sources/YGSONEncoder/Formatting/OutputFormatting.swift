@@ -102,7 +102,7 @@ extension YGSONEncoder {
             }
         }
 
-        func toJSONObject(object: [String: JSONType]) {
+        func toJSONObject(object: [KeyValue]) {
             writer.write("{")
 
             var first = true
