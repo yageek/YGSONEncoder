@@ -14,14 +14,22 @@ final class YGSONEncoderTests: XCTestCase {
     }
 
     func testObject() {
-
         let object = TestEmbedded(a: ["1", "2", "3"], b: [4, 5, 6, 7, 8])
 
         let encoder = YGSONEncoder()
-        
+
         var value: String! = nil
+
+        // Not formatted
         XCTAssertNoThrow(value = try encoder.encodeString(object))
         XCTAssertEqual(#"{"a":["1","2","3"],"b":[4,5,6,7,8]}\n"#, value)
+
+        // Formatted
+        encoder.outputFormatting = [.prettyPrinted]
+        XCTAssertNoThrow(value = try encoder.encodeString(object))
+        print("Value: \(value!)")
+        XCTAssertEqual(#"{"a":["1","2","3"],"b":[4,5,6,7,8]}\n"#, value)
+
     }
 
     static var allTests = [
