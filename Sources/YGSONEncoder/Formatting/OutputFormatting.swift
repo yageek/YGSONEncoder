@@ -33,6 +33,18 @@ extension YGSONEncoder {
         case base64
         case custom((Data, Encoder) throws -> Void)
         case deferredToData
+
+        fileprivate func encode(data: Data) -> String {
+
+            switch self {
+            case .base64:
+                return data.base64EncodedString()
+            case .custom(_):
+                return ""
+            case .deferredToData:
+                return ""
+            }
+        }
     }
 
     public enum KeyEncodingStrategy {
@@ -41,8 +53,10 @@ extension YGSONEncoder {
         case custom(([CodingKey]) -> CodingKey)
     }
 
-
     private class Writer {
+
+        private static let IndentationString: String = ""
+        private var indentationLevel: UInt = 0
         private(set) var buffer: String = ""
 
         func clear() {
@@ -52,13 +66,36 @@ extension YGSONEncoder {
         func write(_ str: String) {
             self.buffer.append(contentsOf: str)
         }
+
+        func indentAndWrite(_ str: String) {
+            self.indentationLevel += 1
+            writeIndent()
+            write(str)
+        }
+
+        private func writeIndent() {
+            for _ in 0..<indentationLevel {
+                print(Writer.IndentationString)
+            }
+        }
     }
 
     final class Formatter {
+
+        struct Options {
+            let formatting: OutputFormatting
+        }
+
         private var topLevel: JSONType
         private var writer: Writer
+        private var options: Options
 
-        init(topLevel: JSONType) {
+        private var prettyPrinted: Bool {
+            return self.options.formatting == .prettyPrinted
+        }
+
+        init(topLevel: JSONType, options: Options) {
+            self.options = options
             self.writer = Writer()
             self.topLevel = topLevel
         }
