@@ -207,38 +207,64 @@ extension YGSONEncoder {
         // MARK: - Dictionary
 
         /// See: https://github.com/apple/swift/blob/master/stdlib/public/Darwin/Foundation/JSONEncoder.swift
-        func snakeCase(key: String) -> String {
-            guard !key.isEmpty else { return key }
+        func snakeCase(stringKey: String) -> String {
+            guard !stringKey.isEmpty else { return stringKey }
 
-            var words: [Range<String.Index>] = []
+            var words : [Range<String.Index>] = []
+            // The general idea of this algorithm is to split words on transition from lower to upper case, then on transition of >1 upper case characters to lowercase
+            //
+            // myProperty -> my_property
+            // myURLProperty -> my_url_property
+            //
+            // We assume, per Swift naming conventions, that the first character of the key is lowercase.
+            var wordStart = stringKey.startIndex
+            var searchRange = stringKey.index(after: wordStart)..<stringKey.endIndex
 
-            var start = key.startIndex
-            var range = key.index(after: start)..<key.endIndex
+            // Find next uppercase character
+            while let upperCaseRange = stringKey.rangeOfCharacter(from: CharacterSet.uppercaseLetters, options: [], range: searchRange) {
+                let untilUpperCase = wordStart..<upperCaseRange.lowerBound
+                words.append(untilUpperCase)
 
-            while let upperCaseRange = key.rangeOfCharacter(from: .uppercaseLetters, options: [], range: range) {
-                let wordRange = start..<upperCaseRange.lowerBound
-                words.append(wordRange)
-
-                range = upperCaseRange.lowerBound..<range.upperBound
-
-                guard let lowerCaseRange = key.rangeOfCharacter(from: .lowercaseLetters, options: [], range: range) else {
-                    start = range.lowerBound
+                // Find next lowercase character
+                searchRange = upperCaseRange.lowerBound..<searchRange.upperBound
+                guard let lowerCaseRange = stringKey.rangeOfCharacter(from: CharacterSet.lowercaseLetters, options: [], range: searchRange) else {
+                    // There are no more lower case letters. Just end here.
+                    wordStart = searchRange.lowerBound
                     break
                 }
 
-                
+                // Is the next lowercase letter more than 1 after the uppercase? If so, we encountered a group of uppercase letters that we should treat as its own word
+                let nextCharacterAfterCapital = stringKey.index(after: upperCaseRange.lowerBound)
+                if lowerCaseRange.lowerBound == nextCharacterAfterCapital {
+                    // The next character after capital is a lower case character and therefore not a word boundary.
+                    // Continue searching for the next upper case for the boundary.
+                    wordStart = upperCaseRange.lowerBound
+                } else {
+                    // There was a range of >1 capital letters. Turn those into a word, stopping at the capital before the lower case character.
+                    let beforeLowerIndex = stringKey.index(before: lowerCaseRange.lowerBound)
+                    words.append(upperCaseRange.lowerBound..<beforeLowerIndex)
+
+                    // Next word starts at the capital before the lowercase we just found
+                    wordStart = beforeLowerIndex
+                }
+                searchRange = lowerCaseRange.upperBound..<searchRange.upperBound
             }
+            words.append(wordStart..<searchRange.upperBound)
+            let result = words.map({ (range) in
+                return stringKey[range].lowercased()
+            }).joined(separator: "_")
+            return result
         }
+
         func keyConvertion(key: String) -> String {
 
             switch options.keyEncoding {
-
             case .convertToSnakeCase:
-
+                return keyConvertion(key: key)
             case .useDefaultKeys:
                 return key
-            case .custom(let op):
-                return key
+            case .custom(_):
+                fatalError("Unimplemented yet")
             }
         }
         func writeJSONObject(object: [KeyValue]) throws {

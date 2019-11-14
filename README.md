@@ -12,6 +12,7 @@ Code largely inspired by:
 - [X] `DataEncodingStrategy`
 - [X] `OutputFormatting`
 - [ ] `KeyEncodingStrategy`
+- [ ] `JSONEncoder.NonConformingFloatEncodingStrategy`
 - [ ] Class inheritance encoding
 
 ## Usage
