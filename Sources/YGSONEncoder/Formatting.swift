@@ -24,6 +24,7 @@ extension YGSONEncoder {
     public enum DateEncodingStrategy {
         case deferredToDate
         case secondsSince1970
+        case millisecondsSince1970
         case iso8601
         case formatted(DateFormatter)
         case custom((Date, Encoder) throws -> Void)
@@ -93,9 +94,20 @@ extension YGSONEncoder {
 
     final class Formatter {
 
+        // See: https://stackoverflow.com/a/16254918/856142
+        private let iso8601DateFormatter: DateFormatter = {
+            let dateFormatter = DateFormatter()
+            let enUSPosixLocale = Locale(identifier: "en_US_POSIX")
+            dateFormatter.locale = enUSPosixLocale
+            dateFormatter.dateFormat = "yyyy-MM-dd'T'HH:mm:ssZZZZZ"
+            dateFormatter.calendar = Calendar(identifier: .gregorian)
+            return dateFormatter
+
+        }()
         struct Options {
             let formatting: OutputFormatting
             let dataEncoding: DataEncodingStrategy
+            let dateEncoding: DateEncodingStrategy
         }
 
         private var topLevel: JSONType
@@ -143,6 +155,27 @@ extension YGSONEncoder {
                 try op(data, encoder)
             case .deferredToData:
                 writer.writeData(data)
+            }
+        }
+
+        func writeDate(_ date: Date) throws {
+            switch options.dateEncoding {
+            case .deferredToDate:
+                try date.encode(to: self.encoder)
+            case .secondsSince1970:
+                let number = date.timeIntervalSince1970
+                try writeJSONPrimitive(value: .float(number))
+            case .millisecondsSince1970:
+                let number = date.timeIntervalSince1970
+                try writeJSONPrimitive(value: .float(1000.0 * number))
+            case .iso8601:
+                let value = iso8601DateFormatter.string(from: date)
+                try writer.write(value)
+            case .formatted(let formatter):
+                let value = formatter.string(from: date)
+                try writer.write(value)
+            case .custom(let op):
+                try op(date, encoder)
             }
         }
 

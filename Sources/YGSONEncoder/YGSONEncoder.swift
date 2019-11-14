@@ -18,7 +18,7 @@ public class YGSONEncoder {
 
         let topLevel = encoder.jsonValue
 
-        let options = Formatter.Options(formatting: self.outputFormatting, dataEncoding: self.dataEncodingStrategy)
+        let options = Formatter.Options(formatting: self.outputFormatting, dataEncoding: self.dataEncodingStrategy, dateEncoding: self.dateEncodingStrategy)
         let formatter = Formatter(topLevel: topLevel, options: options, encoder: encoder)
         return try formatter.writeJSON()
     }
