@@ -108,6 +108,7 @@ extension YGSONEncoder {
             let formatting: OutputFormatting
             let dataEncoding: DataEncodingStrategy
             let dateEncoding: DateEncodingStrategy
+            let keyEncoding: KeyEncodingStrategy
         }
 
         private var topLevel: JSONType
@@ -204,6 +205,40 @@ extension YGSONEncoder {
         }
 
         // MARK: - Dictionary
+        func snakeCase(key: String) -> String {
+            guard !key.isEmpty else { return key }
+
+            var words: [Range<String.Index>] = []
+
+            var start = key.startIndex
+            var range = key.index(after: start)..<key.endIndex
+
+            while let upperCaseRange = key.rangeOfCharacter(from: .uppercaseLetters, options: [], range: range) {
+                let wordRange = start..<upperCaseRange.lowerBound
+                words.append(wordRange)
+
+                range = upperCaseRange.lowerBound..<range.upperBound
+
+                guard let lowerCaseRange = key.rangeOfCharacter(from: .lowercaseLetters, options: [], range: range) else {
+                    start = range.lowerBound
+                    break
+                }
+
+                
+            }
+        }
+        func keyConvertion(key: String) -> String {
+
+            switch options.keyEncoding {
+
+            case .convertToSnakeCase:
+
+            case .useDefaultKeys:
+                return key
+            case .custom(let op):
+                return key
+            }
+        }
         func writeJSONObject(object: [KeyValue]) throws {
             try writer.write("{")
 
