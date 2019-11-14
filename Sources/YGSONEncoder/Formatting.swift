@@ -205,6 +205,8 @@ extension YGSONEncoder {
         }
 
         // MARK: - Dictionary
+
+        /// See: https://github.com/apple/swift/blob/master/stdlib/public/Darwin/Foundation/JSONEncoder.swift
         func snakeCase(key: String) -> String {
             guard !key.isEmpty else { return key }
 
