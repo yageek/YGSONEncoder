@@ -59,6 +59,7 @@ extension YGSONEncoder {
             let data = "    ".data(using: .utf8)!
             return data
         }()
+
         private var indentationLevel: UInt = 0
         private(set) var buffer = Data()
 
@@ -68,6 +69,10 @@ extension YGSONEncoder {
 
         func write(_ str: String) throws {
             guard let data = str.data(using: .utf8) else { throw EncodingError.invalidUTF8String(str) }
+            buffer.append(data)
+        }
+
+        func writeData(_ data: Data) {
             buffer.append(data)
         }
 
@@ -105,10 +110,12 @@ extension YGSONEncoder {
             return options.formatting.contains(.sortedKeys)
         }
 
-        init(topLevel: JSONType, options: Options) {
+        let encoder: Encoder
+        init(topLevel: JSONType, options: Options, encoder: Encoder) {
             self.options = options
             self.writer = Writer()
             self.topLevel = topLevel
+            self.encoder = encoder
         }
 
         func writeJSON() throws -> Data {
@@ -127,8 +134,16 @@ extension YGSONEncoder {
         }
 
         // MARK: - Primitives
-        func writeData(_ data: Data) {
+        func writeData(_ data: Data) throws {
 
+            switch options.dataEncoding {
+            case .base64:
+                writer.writeData(data.base64EncodedData())
+            case .custom(let op):
+                try op(data, encoder)
+            case .deferredToData:
+                writer.writeData(data)
+            }
         }
 
         func writeJSONPrimitive(value: JSONType) throws {
@@ -147,7 +162,7 @@ extension YGSONEncoder {
             case .date(let value):
                 try writer.write("\(value)")
             case .data(let data):
-                writeData(data)
+                try writeData(data)
             case .array(let array):
                 try writeJSONArray(elements: array)
             case .object(let object):
