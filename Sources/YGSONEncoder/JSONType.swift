@@ -7,8 +7,8 @@
 
 import Foundation
 
-
 typealias KeyValue = (String, JSONType)
+
 indirect enum JSONType {
     case bool(Bool)
     case integer(Int)

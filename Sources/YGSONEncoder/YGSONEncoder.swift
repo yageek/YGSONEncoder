@@ -3,7 +3,7 @@ import Foundation
 public class YGSONEncoder {
 
     enum EncodingError: Error {
-        case utf8Conversion
+        case invalidUTF8String(String)
     }
 
     public var dataEncodingStrategy: YGSONEncoder.DataEncodingStrategy = .base64
@@ -11,22 +11,15 @@ public class YGSONEncoder {
     public var keyEncodingStrategy: YGSONEncoder.KeyEncodingStrategy = .useDefaultKeys
     public var outputFormatting: YGSONEncoder.OutputFormatting = []
     
-    func encodeString<T>(_ value: T) throws -> String where T: Encodable {
+    func encode<T>(_ value: T) throws -> Data where T: Encodable {
 
         let encoder = _YGSONEncoder()
         try value.encode(to: encoder)
 
         let topLevel = encoder.jsonValue
 
-        let formatter = Formatter(topLevel: topLevel, options: Formatter.Options(formatting: self.outputFormatting))
-        return formatter.toJSON()
-    }
-
-    public func encode<T>(_ value: T) throws -> Data where T: Encodable {
-        let string: String = try encodeString(value)
-
-        guard let data = string.data(using: .utf8) else { throw EncodingError.utf8Conversion }
-        return data
+        let formatter = Formatter(topLevel: topLevel, options: Formatter.Options(formatting: self.outputFormatting, dataEncoding: self.dataEncodingStrategy))
+        return try formatter.writeJSON()
     }
 }
 

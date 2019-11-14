@@ -55,29 +55,33 @@ extension YGSONEncoder {
 
     private class Writer {
 
-        private static let IndentationString: String = "    "
+        private static let IndentationData: Data = {
+            let data = "    ".data(using: .utf8)!
+            return data
+        }()
         private var indentationLevel: UInt = 0
-        private(set) var buffer: String = ""
+        private(set) var buffer = Data()
 
         func clear() {
-            self.buffer.removeAll()
+            buffer.removeAll()
         }
 
-        func write(_ str: String) {
-            self.buffer.append(contentsOf: str)
+        func write(_ str: String) throws {
+            guard let data = str.data(using: .utf8) else { throw EncodingError.invalidUTF8String(str) }
+            buffer.append(data)
         }
 
         func deincrement() {
-            self.indentationLevel -= 1
+            indentationLevel -= 1
         }
 
         func increment() {
-            self.indentationLevel += 1
+            indentationLevel += 1
         }
 
         func writeIndent() {
             for _ in 0..<indentationLevel {
-                self.buffer.append(Writer.IndentationString)
+                buffer.append(Writer.IndentationData)
             }
         }
     }
@@ -86,6 +90,7 @@ extension YGSONEncoder {
 
         struct Options {
             let formatting: OutputFormatting
+            let dataEncoding: DataEncodingStrategy
         }
 
         private var topLevel: JSONType
@@ -93,7 +98,11 @@ extension YGSONEncoder {
         private var options: Options
 
         private var prettyPrinted: Bool {
-            return self.options.formatting == .prettyPrinted
+            return options.formatting.contains(.prettyPrinted)
+        }
+
+        private var sortedKeys: Bool {
+            return options.formatting.contains(.sortedKeys)
         }
 
         init(topLevel: JSONType, options: Options) {
@@ -102,88 +111,112 @@ extension YGSONEncoder {
             self.topLevel = topLevel
         }
 
-        func toJSON() -> String {
+        func writeJSON() throws -> Data {
             self.writer.clear()
-            switch self.topLevel {
+            switch topLevel {
             case .array(let elements):
-                self.toJSONArray(elements: elements)
+                try writeJSONArray(elements: elements)
             case .object(let object):
-                self.toJSONObject(object: object)
+                try writeJSONObject(object: object)
                 break
             default:
-                self.toJSONPrimitive(value: self.topLevel)
+                try writeJSONPrimitive(value: topLevel)
             }
 
-            return self.writer.buffer
+            return writer.buffer
         }
 
-        func toJSONPrimitive(value: JSONType) {
+        // MARK: - Primitives
+        func writeData(_ data: Data) {
+
+        }
+
+        func writeJSONPrimitive(value: JSONType) throws {
             switch value {
             case .bool(let value):
                 let str = value ? "true": "false"
-                writer.write(str)
+                try writer.write(str)
             case .integer(let value):
-                writer.write("\(value)")
+                try writer.write("\(value)")
             case .float(let value):
-                writer.write("\(value)")
+                try writer.write("\(value)")
             case .string(let value):
-                writer.write("\"\(value)\"")
+                try writer.write("\"\(value)\"")
             case .null:
-                writer.write("null")
+                try writer.write("null")
             case .date(let value):
-                writer.write("\(value)")
-            case .data(_):
-                break
+                try writer.write("\(value)")
+            case .data(let data):
+                writeData(data)
             case .array(let array):
-                self.toJSONArray(elements: array)
+                try writeJSONArray(elements: array)
             case .object(let object):
-                self.toJSONObject(object: object)
+                try writeJSONObject(object: object)
             }
         }
 
-        func toJSONObject(object: [KeyValue]) {
-            writer.write("{")
+        // MARK: - Dictionary
+        func writeJSONObject(object: [KeyValue]) throws {
+            try writer.write("{")
 
             if prettyPrinted {
-                writer.write("\n")
+                try writer.write("\n")
                 writer.increment()
                 writer.writeIndent()
             }
 
             var first = true
-            for (key, value) in object {
+            func writeKeyValue(key: String, value: JSONType) throws {
                 if first {
                     first = false
                 } else if prettyPrinted {
-                    writer.write(",\n")
+                    try writer.write(",\n")
                     writer.writeIndent()
                 } else {
-                    writer.write(",")
+                    try writer.write(",")
                 }
 
                 if prettyPrinted {
-                    writer.write("\"\(key)\": ")
+                    try writer.write("\"\(key)\": ")
                 } else {
-                    writer.write("\"\(key)\":")
+                    try writer.write("\"\(key)\":")
                 }
 
-                toJSONPrimitive(value: value)
+                try writeJSONPrimitive(value: value)
             }
 
+
+            if sortedKeys {
+                let elements = object.sorted { (a, b) -> Bool in
+                    let a = a.0
+                    let b = b.0
+                    return a.compare(b, options: [.numeric, .caseInsensitive, .forcedOrdering], range: a.startIndex..<a.endIndex) == .orderedAscending
+                }
+                for (key, value) in elements {
+                    try writeKeyValue(key: key, value: value)
+                }
+            } else {
+                for (key, value) in object {
+                    try writeKeyValue(key: key, value: value)
+                }
+            }
+
+
             if prettyPrinted {
-                writer.write("\n")
+                try writer.write("\n")
                 writer.deincrement()
                 writer.writeIndent()
             }
 
-            writer.write("}")
+            try writer.write("}")
         }
 
-        func toJSONArray(elements: [JSONType]) {
-            writer.write("[")
+        // MARK: - Array
+        func writeJSONArray(elements: [JSONType]) throws {
+            try writer.write("[")
 
             if prettyPrinted {
-                writer.write("\n")
+                try writer.write("\n")
                 writer.increment()
                 writer.writeIndent()
             }
@@ -193,21 +226,22 @@ extension YGSONEncoder {
                 if first {
                     first = false
                 } else if prettyPrinted {
-                    writer.write(",\n")
+                    try writer.write(",\n")
                     writer.writeIndent()
                 } else {
-                    writer.write(",")
+                    try writer.write(",")
                 }
 
-                toJSONPrimitive(value: element)
+                try writeJSONPrimitive(value: element)
             }
 
             if prettyPrinted {
-                writer.write("\n")
+                try writer.write("\n")
                 writer.deincrement()
                 writer.writeIndent()
             }
-            writer.write("]")
+            try writer.write("]")
         }
+
     }
 }

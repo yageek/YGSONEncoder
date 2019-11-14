@@ -71,11 +71,11 @@ extension _YGSONEncoder {
         }
 
         func superEncoder() -> Encoder {
-            fatalError("Unimplemented")
+            fatalError("Unimplemented yet")
         }
 
         func superEncoder(forKey key: Key) -> Encoder {
-            fatalError("Unimplemented")
+            fatalError("Unimplemented yet")
         }
     }
 
