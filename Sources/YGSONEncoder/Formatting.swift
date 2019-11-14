@@ -55,7 +55,7 @@ extension YGSONEncoder {
 
     private class Writer {
 
-        private static let IndentationString: String = ""
+        private static let IndentationString: String = "    "
         private var indentationLevel: UInt = 0
         private(set) var buffer: String = ""
 
@@ -75,14 +75,9 @@ extension YGSONEncoder {
             self.indentationLevel += 1
         }
 
-        func indentAndWrite(_ str: String) {
-            writeIndent()
-            write(str)
-        }
-
         func writeIndent() {
             for _ in 0..<indentationLevel {
-                print(Writer.IndentationString)
+                self.buffer.append(Writer.IndentationString)
             }
         }
     }
@@ -150,20 +145,24 @@ extension YGSONEncoder {
             writer.write("{")
 
             if prettyPrinted {
+                writer.write("\n")
                 writer.increment()
-                writer.indentAndWrite("\\n")
+                writer.writeIndent()
             }
 
             var first = true
             for (key, value) in object {
                 if first {
                     first = false
+                } else if prettyPrinted {
+                    writer.write(",\n")
+                    writer.writeIndent()
                 } else {
                     writer.write(",")
                 }
 
                 if prettyPrinted {
-                    writer.indentAndWrite("\"\(key)\": ")
+                    writer.write("\"\(key)\": ")
                 } else {
                     writer.write("\"\(key)\":")
                 }
@@ -172,43 +171,43 @@ extension YGSONEncoder {
             }
 
             if prettyPrinted {
+                writer.write("\n")
                 writer.deincrement()
-                writer.indentAndWrite("}\\n")
-            } else {
-                writer.write("}\\n")
+                writer.writeIndent()
             }
+
+            writer.write("}")
         }
 
         func toJSONArray(elements: [JSONType]) {
             writer.write("[")
 
             if prettyPrinted {
-                writer.indentAndWrite("\n")
+                writer.write("\n")
                 writer.increment()
+                writer.writeIndent()
             }
 
             var first = true
             for element in elements {
                 if first {
                     first = false
+                } else if prettyPrinted {
+                    writer.write(",\n")
+                    writer.writeIndent()
                 } else {
                     writer.write(",")
                 }
 
-                if prettyPrinted {
-                    writer.writeIndent()
-                }
-                
                 toJSONPrimitive(value: element)
             }
 
             if prettyPrinted {
+                writer.write("\n")
                 writer.deincrement()
-                writer.indentAndWrite("]")
-            } else {
-                writer.write("]")
+                writer.writeIndent()
             }
-
+            writer.write("]")
         }
     }
 }

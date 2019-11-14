@@ -22,13 +22,28 @@ final class YGSONEncoderTests: XCTestCase {
 
         // Not formatted
         XCTAssertNoThrow(value = try encoder.encodeString(object))
-        XCTAssertEqual(#"{"a":["1","2","3"],"b":[4,5,6,7,8]}\n"#, value)
+        XCTAssertEqual(#"{"a":["1","2","3"],"b":[4,5,6,7,8]}"#, value)
 
         // Formatted
         encoder.outputFormatting = [.prettyPrinted]
         XCTAssertNoThrow(value = try encoder.encodeString(object))
-        print("Value: \(value!)")
-        XCTAssertEqual(#"{"a":["1","2","3"],"b":[4,5,6,7,8]}\n"#, value)
+        let expectedPrettyPrinted = """
+{
+    "a": [
+        "1",
+        "2",
+        "3"
+    ],
+    "b": [
+        4,
+        5,
+        6,
+        7,
+        8
+    ]
+}
+"""
+        XCTAssertEqual(expectedPrettyPrinted, value)
 
     }
 
