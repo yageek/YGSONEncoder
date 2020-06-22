@@ -26,7 +26,7 @@ struct TestUnsortedStruct: Codable {
 
 let element = TestUnsortedStruct(z: "1", b: "2", r: "3", c: "4")
 let encoder = YGSONEncoder()
-encoder.outputFormatting = [.sortedKey]
+encoder.outputFormatting = [.sortedKeys]
 
 do {
     let data = try encoder.encode(element)
